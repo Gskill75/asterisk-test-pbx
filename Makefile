@@ -48,7 +48,7 @@ image:
 build:
 	$(CTR) build --build-arg ASTERISK_VERSION=$(ASTERISK_VERSION) \
 	-t $(PBX_IMAGE) -t $(PBX_IMAGE):$(ASTERISK_VERSION) .
-	$(CTR) build -t $(CAP_IMAGE) capture
+	$(CTR) build -t $(CAP_IMAGE) -f capture/Containerfile capture
 
 $(PRE_FILE): | image
 	$(MAKE) preanswer
