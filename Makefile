@@ -29,7 +29,7 @@ FW       ?= /usr/libexec/ApplicationFirewall/socketfilterfw
 PRE_FILE  ?= sounds/predecroche.wav
 PRE_NOTES ?= C4 E4 G4 C5 G4 E4
 
-pw = $$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)
+pw = $$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 16)
 
 .PHONY: init image build preanswer up down reset destroy ps logs sh cli \
 	endpoints contacts registrations channels trace history_on history \

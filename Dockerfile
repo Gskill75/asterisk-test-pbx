@@ -26,14 +26,18 @@ RUN curl -fsSL https://downloads.asterisk.org/pub/telephony/asterisk/releases/as
 	| tar xz --strip-components=1
 
 # Portable binaries (no -march=native), bundled pjproject, english core sounds
-# and the default music on hold.
+# and the default music on hold. /var/run is a symlink to /run in the runtime
+# image, which docker refuses to copy a directory onto.
 RUN ./configure --prefix=/usr --libdir=/usr/lib --with-pjproject-bundled \
 	&& make menuselect.makeopts \
 	&& menuselect/menuselect --disable BUILD_NATIVE \
 	--enable CORE-SOUNDS-EN-GSM --enable MOH-OPSOUND-WAV menuselect.makeopts \
 	&& make -j$(nproc) \
 	&& make install DESTDIR=/staging \
-	&& rm -rf /staging/usr/include
+	&& rm -rf /staging/usr/include \
+	&& mkdir -p /staging/run \
+	&& mv /staging/var/run/asterisk /staging/run/ \
+	&& rmdir /staging/var/run
 
 # Debian packages providing the shared libraries Asterisk links to.
 RUN find /staging -type f \( -name '*.so*' -o -path '*/sbin/*' \) \
