@@ -1,0 +1,40 @@
+name: asterisk-test-pbx-test
+
+# Pre-answer (183) test bench, see ../README.md: the test PBX, with the same
+# configuration as ../compose.yml but no published ports, no .env and a
+# simulated carrier instead of the real SIP trunk. SIPp, playing both the
+# carrier and the extension 100, shares its network namespace.
+
+services:
+  pbx:
+    image: ${PBX_IMAGE:-localhost/asterisk-test-pbx}
+    container_name: asterisk-test-pbx-test
+    environment:
+      - PBX_EXTERNAL_IP=127.0.0.1
+      - TRUNK_HOST=127.0.0.2                # the simulated carrier, SIPp
+      - TRUNK_EXTERNAL_IP=
+      - PBX_PREANSWER=${PBX_PREANSWER:-yes} # pre-answer music, yes or no
+      - INBOUND_EXTEN=100
+      - SIP_PASSWORD_100=test
+      - SIP_PASSWORD_101=test
+      - SIP_PASSWORD_102=test
+    volumes:
+      - ../config:/config:ro
+      - ./pjsip_trunk.conf:/config/pjsip_trunk.conf:ro
+      - ../sounds:/var/lib/asterisk/sounds/custom:ro
+
+  sipp:
+    image: localhost/asterisk-test-pbx-sipp
+    build:
+      context: .
+      dockerfile: Containerfile
+    network_mode: container:asterisk-test-pbx-test
+    cap_add:
+      - net_admin                           # tcpdump
+      - net_raw                             # tcpdump
+    environment:
+      - PBX_PREANSWER=${PBX_PREANSWER:-yes}
+    volumes:
+      - ./:/test:ro
+      - ./out:/out
+    command: /test/run.sh

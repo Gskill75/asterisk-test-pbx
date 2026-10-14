@@ -1,0 +1,46 @@
+name: asterisk-test-pbx
+
+# Test PBX, see README.md. The configuration, ./config, is copied to
+# /etc/asterisk at every start, with the values of .env: make reset applies
+# the changes.
+
+services:
+  pbx:
+    image: ${PBX_IMAGE:-localhost/asterisk-test-pbx}
+    container_name: asterisk-test-pbx
+    # Rootless podman: with the default bridge network, UDP sent from a
+    # published port (RTP) never gets out, pasta handles it. Docker: bridge.
+    network_mode: ${PBX_NETWORK:-pasta}
+    ports:                                  # PBX_BIND=0.0.0.0 to reach it from the LAN
+      - "${PBX_BIND:-127.0.0.1}:5060:5060/udp"               # SIP UDP
+      - "${PBX_BIND:-127.0.0.1}:5060:5060/tcp"               # SIP TCP
+      - "${PBX_BIND:-127.0.0.1}:10000-10099:10000-10099/udp" # RTP, see rtp.conf
+      - "${CAPTURE_BIND:-127.0.0.1}:8080:8080"               # captures UI
+    env_file: .env
+    environment:
+      - TZ=${TZ:-Europe/Paris}
+      - TRUNK_EXTERNAL_IP=${TRUNK_EXTERNAL_IP-auto} # public address, auto or empty
+    volumes:
+      - ./config:/config:ro
+      - ./sounds:/var/lib/asterisk/sounds/custom:ro       # make preanswer
+    restart: unless-stopped
+
+  # Captures the PBX SIP and RTP traffic, sharing its network namespace, and
+  # serves them, with the test bench ones, on http://127.0.0.1:8080
+  capture:
+    image: localhost/asterisk-test-pbx-capture
+    build: capture
+    network_mode: container:asterisk-test-pbx
+    cap_add:
+      - net_admin                           # tcpdump
+      - net_raw                             # tcpdump
+    environment:
+      - TZ=${TZ:-Europe/Paris}
+      - CAPTURE_ROTATE=${CAPTURE_ROTATE:-900}  # new file every 15 min
+      - CAPTURE_KEEP=${CAPTURE_KEEP:-48}       # most recent files kept
+    volumes:
+      - ./captures:/captures
+      - ./test/out:/tests:ro
+    depends_on:
+      - pbx
+    restart: unless-stopped

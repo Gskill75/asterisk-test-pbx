@@ -1,0 +1,6 @@
+# Capture sidecar, see ../README.md: tcpdump in the network namespace of the
+# PBX, and a small web UI to download the captures.
+FROM docker.io/library/alpine:3.23
+RUN apk add --no-cache python3 tcpdump tzdata
+COPY capture.sh server.py /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/capture.sh"]

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- Simulated carrier, PBX_PREANSWER=no: inbound call to the trunk, expecting
+     a plain 180 Ringing without SDP, and no 183, before the extension
+     answers. -->
+
+<scenario name="carrier, plain 180">
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:0612345678@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
+      To: <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: <sip:0612345678@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 1 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 8 101
+      a=rtpmap:8 PCMA/8000
+      a=rtpmap:101 telephone-event/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+
+  <recv response="180">
+    <action>
+      <ereg regexp="m=audio" search_in="body" check_it_inverse="true" assign_to="sdp"/>
+    </action>
+  </recv>
+
+  <recv response="180" optional="true"/>
+
+  <recv response="200" rrs="true"/>
+
+  <send>
+    <![CDATA[
+
+      ACK [next_url] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:0612345678@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
+      [last_To:]
+      [routes]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: <sip:0612345678@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="1000"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      BYE [next_url] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:0612345678@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
+      [last_To:]
+      [routes]
+      Call-ID: [call_id]
+      CSeq: 2 BYE
+      Contact: <sip:0612345678@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true"/>
+
+  <Reference variables="sdp"/>
+</scenario>
