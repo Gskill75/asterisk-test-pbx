@@ -19,6 +19,7 @@ services:
     env_file: .env
     environment:
       - TZ=${TZ:-Europe/Paris}
+      - PBX_EXTERNAL_IP=${PBX_EXTERNAL_IP-auto}     # resolved by make, see Makefile
       - TRUNK_EXTERNAL_IP=${TRUNK_EXTERNAL_IP-auto} # public address, auto or empty
     volumes:
       - ./config:/config:ro

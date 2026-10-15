@@ -15,14 +15,26 @@ export PBX_IMAGE PBX_NETWORK
 SRV_NAME ?= pbx
 CNT_CLI  ?= asterisk -rvvv
 
-# Address used by the phones to reach the PBX, the host itself by default.
-# Use the interface of the default route, the host might have several.
+# LAN address of the host. Use the interface of the default route, the host
+# might have several.
 HOST_IF  ?= $(shell route -n get default 2>/dev/null | awk '/interface:/{print $$2}')
 HOST_IP  ?= $(shell ipconfig getifaddr $(HOST_IF) 2>/dev/null || hostname -I 2>/dev/null | cut -d' ' -f1)
 
 # Podman publishes ports through gvproxy, which the macOS firewall may block.
 GVPROXY  ?= $(realpath $(dir $(realpath $(shell command -v $(CTR))))../libexec/podman/gvproxy)
 FW       ?= /usr/libexec/ApplicationFirewall/socketfilterfw
+
+# Address used by the phones to reach the PBX. auto, or empty, or 0.0.0.0 (a
+# bind address, not one to advertise): the host LAN address when the ports
+# are published on the LAN (PBX_BIND) and the macOS firewall lets gvproxy
+# through, the host itself, 127.0.0.1, otherwise.
+ifneq ($(filter auto 0.0.0.0,$(or $(PBX_EXTERNAL_IP),auto)),)
+PBX_ON_LAN := $(filter-out 127.0.0.1,$(or $(PBX_BIND),127.0.0.1))
+GVPROXY_BLOCKED := $(if $(and $(PBX_ON_LAN),$(wildcard $(FW)),$(GVPROXY)),$(shell \
+	$(FW) --getappblocked $(GVPROXY) 2>/dev/null | grep -q 'is blocked' && echo yes))
+override PBX_EXTERNAL_IP := $(if $(and $(PBX_ON_LAN),$(HOST_IP),$(if $(GVPROXY_BLOCKED),,yes)),$(HOST_IP),127.0.0.1)
+endif
+export PBX_EXTERNAL_IP
 
 # Pre-answer music, 8 kHz mono 16 bit wav: make preanswer SRC=music.mp3,
 # a demo melody otherwise.
@@ -69,6 +81,8 @@ endif
 up: | .env
 	mkdir -p captures
 	$(COMPOSE) up -d
+	@echo "Phones: server $(PBX_EXTERNAL_IP):5060"
+	$(if $(GVPROXY_BLOCKED),@echo "The firewall blocks gvproxy so $(HOST_IP) is unreachable: make firewall_allow")
 
 down:
 	$(COMPOSE) down

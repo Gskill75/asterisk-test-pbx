@@ -22,6 +22,13 @@ log() { echo "entrypoint: $*" >&2; }
 export PBX_EXTERNAL_IP PBX_PREANSWER INBOUND_EXTEN TRUNK_HOST TRUNK_USER \
 	TRUNK_PASSWORD TRUNK_PROXY TRUNK_EXTERNAL_IP
 
+# make resolves PBX_EXTERNAL_IP=auto, it knows the host: not started by make
+case $PBX_EXTERNAL_IP in
+auto|0.0.0.0)
+	log "PBX_EXTERNAL_IP=$PBX_EXTERNAL_IP, start with make to detect it, using 127.0.0.1."
+	PBX_EXTERNAL_IP=127.0.0.1 ;;
+esac
+
 case $PBX_PREANSWER in
 yes|no) ;;
 *) log "PBX_PREANSWER must be yes or no, not '$PBX_PREANSWER'."; exit 1 ;;

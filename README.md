@@ -59,12 +59,17 @@ Les postes peuvent proposer du SRTP (SDES), il est accepté sans être exigé.
 Dans `.env`, puis `make reset` :
 
 ```bash
-PBX_EXTERNAL_IP=192.0.2.10   # IP LAN de l'hôte, voir: make -s host_ip
 PBX_BIND=0.0.0.0             # publie les ports sur toutes les interfaces
+PBX_EXTERNAL_IP=auto         # adresse annoncée aux postes, ou une adresse
 ```
 
+Avec `auto` (ou vide), `make up` annonce aux postes l'IP LAN de l'hôte
+(`make -s host_ip`) quand les ports sont publiés sur le réseau local, sinon
+`127.0.0.1`. `make up` affiche l'adresse retenue, `make accounts` aussi.
+
 Sur macOS, Podman publie les ports via `gvproxy`, que le pare-feu peut
-bloquer (seul `127.0.0.1` répond alors) :
+bloquer : seul `127.0.0.1` répond alors, même depuis l'hôte, et `auto` s'en
+tient à `127.0.0.1`.
 
 ```bash
 make firewall        # état
